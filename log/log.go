@@ -103,8 +103,12 @@ func NewLogger(opts *Options) *zapLogger {
 
 	// 合并 Core
 	combinedCore := zapcore.NewTee(cores...)
+	skip := zap.AddCallerSkip(1)
+	if opts.CallerSkip > 0 {
+		skip = zap.AddCallerSkip(opts.CallerSkip)
+	}
 
-	z := zap.New(combinedCore, zap.AddCaller(), zap.AddCallerSkip(2))
+	z := zap.New(combinedCore, zap.AddCaller(), skip)
 	logger := &zapLogger{z: z}
 
 	// 把标准库的 log.Logger 的 info 级别的输出重定向到 zap.Logger
