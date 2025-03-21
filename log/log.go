@@ -86,7 +86,7 @@ func NewLogger(opts *Options) *zapLogger {
 			// 获取日志写入位置
 			writeSyncer := getLogWriter(file, opts.Maxsize, opts.MaxBackup, opts.MaxAge)
 			// 获取日志编码格式
-			encoder := getEncoder()
+			encoder := getEncoder(opts)
 			// 创建一个将日志写入 WriteSyncer 的核心。
 			fileCore := zapcore.NewCore(encoder, writeSyncer, zapLevel)
 			cores = append(cores, fileCore)
