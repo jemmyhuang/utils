@@ -57,7 +57,7 @@ func NewOptions() *Options {
 }
 
 // 负责设置 encoding 的日志格式
-func getEncoder() zapcore.Encoder {
+func getEncoder(opts *Options) zapcore.Encoder {
 	// 获取一个指定的的EncoderConfig，进行自定义
 	encodeConfig := zap.NewProductionEncoderConfig()
 
@@ -71,6 +71,13 @@ func getEncoder() zapcore.Encoder {
 	// 毫秒数比默认的秒数更精确
 	encodeConfig.EncodeDuration = func(d time.Duration, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendFloat64(float64(d) / float64(time.Millisecond))
+	}
+	// 根据选项配置 caller 和 stacktrace
+	if !opts.DisableCaller {
+		encodeConfig.CallerKey = "caller"
+	}
+	if !opts.DisableStacktrace {
+		encodeConfig.StacktraceKey = "stacktrace"
 	}
 	// 将Level序列化为全大写字符串。例如，将info level序列化为INFO。
 	encodeConfig.EncodeLevel = zapcore.CapitalLevelEncoder
