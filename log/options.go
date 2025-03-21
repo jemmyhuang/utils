@@ -9,25 +9,12 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-var logFilePath = "./log/svr-miniprogam.log"
-
-func dirInit() {
-	// 获取日志文件所在的目录
-	logDir := filepath.Dir(logFilePath)
-	// 检查目录是否存在，如果不存在则创建
-	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		err := os.MkdirAll(logDir, 0755)
-		if err != nil {
-			log.Fatalf("Failed to create log directory: %v", err)
-		}
-	}
-}
+var logFilePath = "./app.log"
 
 // Options 包含与日志相关的配置项.
 type Options struct {
@@ -41,17 +28,31 @@ type Options struct {
 	Format string
 	// 指定日志输出位置
 	OutputPaths []string
+	// 文件的最大大小，超哥切片新文件
+	Maxsize int
+	// 旧日志保持的最大个数
+	MaxBackup int
+	// 文件保持的天数
+	MaxAge int
+	// 是否按照天保留
+	LocalTime bool
+	// 是否压缩/归档旧文件
+	Compress bool
 }
 
 // NewOptions 创建一个带有默认参数的 Options 对象.
 func NewOptions() *Options {
-	dirInit()
 	return &Options{
 		DisableCaller:     false,
 		DisableStacktrace: false,
 		Level:             zapcore.InfoLevel.String(),
 		Format:            "console",
-		OutputPaths:       []string{"stdout", logFilePath},
+		OutputPaths:       []string{logFilePath},
+		Maxsize:           100,
+		MaxBackup:         30,
+		MaxAge:            7,
+		LocalTime:         true,
+		Compress:          true,
 	}
 }
 
@@ -99,8 +100,20 @@ func getLogWriter(filename string, maxsize, maxBackup, maxAge int) zapcore.Write
 		MaxSize:    maxsize,   // 进行切割之前,日志文件的最大大小(MB为单位)
 		MaxAge:     maxAge,    // 保留旧文件的最大天数
 		MaxBackups: maxBackup, // 保留旧文件的最大个数
+		LocalTime:  true,      // 是否按照天保留
 		Compress:   false,     // 是否压缩/归档旧文件
 	}
 
 	return zapcore.AddSync(lumberJackLogger)
+}
+
+func createDirIfNotExists(logFilePath string) error {
+	dir := filepath.Dir(logFilePath)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

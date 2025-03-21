@@ -77,21 +77,32 @@ func NewLogger(opts *Options) *zapLogger {
 		zapLevel = zapcore.InfoLevel
 	}
 
-	// 获取日志写入位置
-	writeSyncer := getLogWriter("", 0, 0, 0)
-	// 获取日志编码格式
-	encoder := getEncoder()
+	var cores []zapcore.Core
+	if len(opts.OutputPaths) > 0 {
+		for _, file := range opts.OutputPaths {
+			if err := createDirIfNotExists(file); err != nil {
+				panic(err)
+			}
+			// 获取日志写入位置
+			writeSyncer := getLogWriter(file, opts.Maxsize, opts.MaxBackup, opts.MaxAge)
+			// 获取日志编码格式
+			encoder := getEncoder()
+			// 创建一个将日志写入 WriteSyncer 的核心。
+			fileCore := zapcore.NewCore(encoder, writeSyncer, zapLevel)
+			cores = append(cores, fileCore)
+		}
 
-	// 创建一个将日志写入 WriteSyncer 的核心。
-	fileCore := zapcore.NewCore(encoder, writeSyncer, zapLevel)
+	}
+
 	consoleCore := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), // 控制台格式
 		zapcore.AddSync(os.Stdout),
-		zap.InfoLevel,
+		zap.DebugLevel,
 	)
+	cores = append(cores, consoleCore)
 
 	// 合并 Core
-	combinedCore := zapcore.NewTee(consoleCore, fileCore)
+	combinedCore := zapcore.NewTee(cores...)
 
 	z := zap.New(combinedCore, zap.AddCaller(), zap.AddCallerSkip(2))
 	logger := &zapLogger{z: z}
